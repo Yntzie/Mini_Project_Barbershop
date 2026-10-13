@@ -81,8 +81,8 @@ model WorkingHour {
 model TimeOff {
   id       String   @id @default(cuid())
   barberId String
-  startsAt DateTime // timestamptz, UTC
-  endsAt   DateTime // timestamptz, UTC
+  startsAt DateTime @db.Timestamptz(3) // timestamptz, UTC
+  endsAt   DateTime @db.Timestamptz(3) // timestamptz, UTC
   reason   String?
 
   barber   Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
@@ -96,10 +96,10 @@ model Booking {
   userId    String
   barberId  String
   serviceId String
-  startsAt  DateTime      // timestamptz(3), UTC
-  endsAt    DateTime      // timestamptz(3), UTC
+  startsAt  DateTime      @db.Timestamptz(3) // timestamptz, UTC
+  endsAt    DateTime      @db.Timestamptz(3) // timestamptz, UTC
   status    BookingStatus @default(CONFIRMED)
-  expiresAt DateTime?     // timestamptz – untuk fitur PENDING + pembayaran (fase 2)
+  expiresAt DateTime?     @db.Timestamptz(3) // timestamptz – untuk fitur PENDING + pembayaran (fase 2)
   createdAt DateTime      @default(now())
 
   user      User    @relation(fields: [userId], references: [id])
