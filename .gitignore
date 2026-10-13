@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+docs/BRD.md
+docs/PRD.md
+docs/ROADMAP.md
+docs/BRD.md
+docs/PRD.md
+docs/ROADMAP.md
