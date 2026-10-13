@@ -1,0 +1,111 @@
+// Skema Prisma untuk Sistem Reservasi Barbershop
+// Semua waktu disimpan sebagai UTC (timestamptz), ditampilkan dalam WIB (Asia/Jakarta)
+// Anti double-booking dijaga di level DATABASE dengan exclusion constraint (btree_gist)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enum
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// ---------------------------------------------------------------------------
+// Model
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  phone        String?
+  role         Role      @default(CUSTOMER)
+  createdAt    DateTime  @default(now())
+
+  bookings     Booking[]
+}
+
+model Barber {
+  id           String         @id @default(cuid())
+  name         String
+  isActive     Boolean        @default(true)
+
+  workingHours WorkingHour[]
+  timeOffs     TimeOff[]
+  bookings     Booking[]
+}
+
+model Service {
+  id          String    @id @default(cuid())
+  name        String
+  durationMin Int
+  price       Int       // dalam Rupiah
+  isActive    Boolean   @default(true)
+
+  bookings    Booking[]
+}
+
+// Jam kerja kapster per hari dalam seminggu (waktu dalam WIB, disimpan sebagai string "HH:mm")
+// weekday: 0 = Minggu, 1 = Senin, ..., 6 = Sabtu
+model WorkingHour {
+  id        String @id @default(cuid())
+  barberId  String
+  weekday   Int    // 0-6
+  startTime String // "HH:mm" WIB
+  endTime   String // "HH:mm" WIB
+
+  barber    Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+}
+
+// Cuti atau libur kapster – disimpan sebagai UTC timestamptz
+model TimeOff {
+  id       String   @id @default(cuid())
+  barberId String
+  startsAt DateTime // timestamptz, UTC
+  endsAt   DateTime // timestamptz, UTC
+  reason   String?
+
+  barber   Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+}
+
+// Booking – startsAt/endsAt dalam UTC (presisi milidetik)
+// Exclusion constraint no_overlapping_bookings ditambahkan lewat migrasi SQL manual
+// Index komposit (barberId, startsAt) untuk query slot kosong; index (userId) untuk riwayat
+model Booking {
+  id        String        @id @default(cuid())
+  userId    String
+  barberId  String
+  serviceId String
+  startsAt  DateTime      // timestamptz(3), UTC
+  endsAt    DateTime      // timestamptz(3), UTC
+  status    BookingStatus @default(CONFIRMED)
+  expiresAt DateTime?     // timestamptz – untuk fitur PENDING + pembayaran (fase 2)
+  createdAt DateTime      @default(now())
+
+  user      User    @relation(fields: [userId], references: [id])
+  barber    Barber  @relation(fields: [barberId], references: [id])
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  @@index([barberId, startsAt])
+  @@index([userId])
+}
